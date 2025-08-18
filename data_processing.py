@@ -77,5 +77,8 @@ def download_data(ticker: str) -> pd.DataFrame:
   Converting certain features to float32 for memory and performance efficiency,
   compatability with Pytorch tensors
   """
-  for cols in ["Open", "High", "Low", "Close", "Volume", ""]:  
-    pass
+  for col in ["Open", "High", "Low", "Close", "Volume", "rsi", "ema", "atr", "return"]:
+      ticker_df[col] = ticker_df[col].astype("float32")
+  
+  return ticker_df
+    
