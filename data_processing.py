@@ -129,6 +129,3 @@ def build_dataset(tickers: list[str] = None, features: list[str] = None) -> pd.D
   complete_df = zscore_norm(complete_df, features)
 
   return complete_df
-
-test_df = build_dataset()
-print(test_df)
