@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import talib
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 """
@@ -40,10 +41,8 @@ def download_data(ticker: str) -> pd.DataFrame:
     raise ValueError(f"No data found for {ticker}.")
   
   #Flattens DataFrame columns if multi-index
-  if(isinstance(ticker_df, pd.MultiIndex)):
+  if(isinstance(ticker_df.columns, pd.MultiIndex)):
     ticker_df.columns = ticker_df.columns.get_level_values(0)
-  
-  #Filter out 
   
   #Add a ticker column to the DataFrame
   ticker_df["ticker"] = ticker
@@ -77,7 +76,7 @@ def download_data(ticker: str) -> pd.DataFrame:
   Converting certain features to float32 for memory and performance efficiency,
   compatability with Pytorch tensors
   """
-  for col in ["Open", "High", "Low", "Close", "Volume", "rsi", "ema", "atr", "return"]:
+  for col in ["Open", "High", "Low", "Close", "Volume", "rsi", "ema", "atr", "atr_pct", "return"]:
       ticker_df[col] = ticker_df[col].astype("float32")
   
   return ticker_df
@@ -86,7 +85,7 @@ def download_data(ticker: str) -> pd.DataFrame:
 Normalizes features using rolling z-score. The z-score is computed using the mean
 and standard deviation over the number previous intervals given by window_len
 """
-def zscore_norm(df: pd.DataFrame, features: list[str], window_size: int = 30) -> pd.DataFrame:
+def zscore_norm(df: pd.DataFrame, features: list[str], window_size: int = 31) -> pd.DataFrame:
   norm_df = df.opy()
   grouped_df = df.groupby("ticker", group_keys=False)
 
@@ -97,3 +96,32 @@ def zscore_norm(df: pd.DataFrame, features: list[str], window_size: int = 30) ->
     norm_df[f] = (norm_df[f] - rolling_mean) / (rolling_std + 1e-9)
   
   return norm_df.dropna()
+
+"""
+Method to combine the dataframes from multiple tickers into the complete dataset.
+"""
+def build_dataset(tickers: list[str] = None, features: list[str] = None) -> pd.DataFrame:
+  #Default tickers and input features
+  if tickers is None:
+    tickers = ["SPY", "QQQ", "DIA", "IWM", "VTI"]
+  if features is None:
+    features = ["Open", "High", "Low", "Close", "Volume", "rsi", "ema", "atr_pct"]
+  
+  #Download ticker data in parallel instead of sequentially to reduce wait time
+  ticker_dfs = []
+  with ThreadPoolExecutor(max_workers=5) as exe:
+    futures = {exe.submit(download_data, t): t for t in tickers}
+    for f in as_completed(futures):
+      ticker_dfs.append(f.result())
+  
+  #Combine the list of ticker DataFrames into one DataFrame
+  complete_df = pd.concat(ticker_dfs, axis=0, ignore_index=False)
+  #Maintain chronological order by sorting by datetime index
+  complete_df.sort_index(inplace=True)
+  #Replace the datetime index with a numerical index
+  complete_df.reset_index(drop=True, inplace=True)
+
+  #Normalize input features
+  complete_df = zscore_norm(complete_df, features)
+
+  return complete_df
