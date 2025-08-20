@@ -81,4 +81,19 @@ def download_data(ticker: str) -> pd.DataFrame:
       ticker_df[col] = ticker_df[col].astype("float32")
   
   return ticker_df
-    
+  
+"""
+Normalizes features using rolling z-score. The z-score is computed using the mean
+and standard deviation over the number previous intervals given by window_len
+"""
+def zscore_norm(df: pd.DataFrame, features: list[str], window_size: int = 30) -> pd.DataFrame:
+  norm_df = df.opy()
+  grouped_df = df.groupby("ticker", group_keys=False)
+
+  for f in features:
+    rolling_mean = grouped_df[f].transform(lambda x: x.rolling(window_size, min_periods=window_size).mean())
+    rolling_std = grouped_df[f].transform(lambda x: x.rolling(window_size, min_periods=window_size).std(ddof=0))
+    #A very small constant is added to the std to prevent division by zero errors
+    norm_df[f] = (norm_df[f] - rolling_mean) / (rolling_std + 1e-9)
+  
+  return norm_df.dropna()
