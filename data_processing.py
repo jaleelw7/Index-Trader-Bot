@@ -4,6 +4,8 @@ import pandas as pd
 import talib
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone, timedelta
+
 
 
 """
@@ -24,25 +26,27 @@ def download_data(ticker: str) -> pd.DataFrame:
   RSI_PERIOD = 14 #timeperiod parameter for RSI
   EMA_PERIOD = 21 #timeperiod parameter for EMA
   ATR_PERIOD = 14 #timeperiod parameter for ATR
+  END = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+  START = END - timedelta(days=365)
 
   #Checks if ticker exists, raises exception if false
   if not ticker_exists(ticker):
-    raise ValueError(f"{ticker} does not exist.")
+    raise ValueError(f"Ticker: {ticker} does not exist.")
   
   #Download data for each ticker individually
   ticker_df = yf.download(ticker,
+                          start=START,
+                          end=END,
                           interval="60m",
-                          period="1y",
                           progress=False,
                           threads=False)
   
+  #Flattens DataFrame columns if multi-index
+  ticker_df = ticker_df.xs(ticker, axis=1, level=1)
+
   #Raises an exception if no data was downloaded for ticker
   if ticker_df is None or ticker_df.empty:
     raise ValueError(f"No data found for {ticker}.")
-  
-  #Flattens DataFrame columns if multi-index
-  if(isinstance(ticker_df.columns, pd.MultiIndex)):
-    ticker_df.columns = ticker_df.columns.get_level_values(0)
   
   #Add a ticker column to the DataFrame
   ticker_df["ticker"] = ticker
@@ -86,7 +90,7 @@ Normalizes features using rolling z-score. The z-score is computed using the mea
 and standard deviation over the number previous intervals given by window_len
 """
 def zscore_norm(df: pd.DataFrame, features: list[str], window_size: int = 31) -> pd.DataFrame:
-  norm_df = df.opy()
+  norm_df = df.copy()
   grouped_df = df.groupby("ticker", group_keys=False)
 
   for f in features:
@@ -109,7 +113,7 @@ def build_dataset(tickers: list[str] = None, features: list[str] = None) -> pd.D
   
   #Download ticker data in parallel instead of sequentially to reduce wait time
   ticker_dfs = []
-  with ThreadPoolExecutor(max_workers=5) as exe:
+  with ThreadPoolExecutor(max_workers=3) as exe:
     futures = {exe.submit(download_data, t): t for t in tickers}
     for f in as_completed(futures):
       ticker_dfs.append(f.result())
@@ -125,3 +129,6 @@ def build_dataset(tickers: list[str] = None, features: list[str] = None) -> pd.D
   complete_df = zscore_norm(complete_df, features)
 
   return complete_df
+
+test_df = build_dataset()
+print(test_df)
