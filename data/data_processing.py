@@ -24,11 +24,7 @@ def zscore_norm(df: pd.DataFrame, features: list[str], window_size: int = 31) ->
 """
 Method to combine the dataframes from multiple tickers into the complete dataset.
 """
-def build_dataset(tickers: list[str] = None, features: list[str] = None) -> pd.DataFrame:
-  #Default tickers and input features
-  if tickers is None:
-    tickers = ["SPY", "QQQ", "DIA", "IWM", "VTI"]
-  
+def build_dataset(tickers: list[str], features: list[str]) -> pd.DataFrame:
   #Download ticker data in parallel instead of sequentially to reduce wait time
   ticker_dfs = []
   with ThreadPoolExecutor(max_workers=3) as exe:
@@ -94,6 +90,9 @@ def create_sequence(df: pd.DataFrame, features: list[str], label: str = "return_
 Method to get training and testing data for a list of tickers and features with a given split percentage
 """
 def get_train_test(tickers: list[str] = None, features: list[str] = None, split: int = 0.8) -> tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
+  #Default tickers and input features
+  if tickers is None:
+    tickers = ["SPY", "QQQ", "DIA", "IWM", "VTI"]
   if features is None:
     features = ["Open", "High", "Low", "Close", "Volume", "rsi", "ema", "atr_pct"]
 
