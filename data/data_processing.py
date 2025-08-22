@@ -28,8 +28,6 @@ def build_dataset(tickers: list[str] = None, features: list[str] = None) -> pd.D
   #Default tickers and input features
   if tickers is None:
     tickers = ["SPY", "QQQ", "DIA", "IWM", "VTI"]
-  if features is None:
-    features = ["Open", "High", "Low", "Close", "Volume", "rsi", "ema", "atr_pct"]
   
   #Download ticker data in parallel instead of sequentially to reduce wait time
   ticker_dfs = []
@@ -53,7 +51,7 @@ def build_dataset(tickers: list[str] = None, features: list[str] = None) -> pd.D
 """
 Method to split the DataFrame into training and testing DataFrames chronologically per ticker.
 """
-def split_df(df: pd.DataFrame, split: float = 0.8) -> tuple[pd.DataFrame, pd.DataFrame]:
+def split_df(df: pd.DataFrame, split: float) -> tuple[pd.DataFrame, pd.DataFrame]:
   train_list, test_list = [], []
 
   #Group the Dataframe by ticker and loop through each group
@@ -76,7 +74,7 @@ def split_df(df: pd.DataFrame, split: float = 0.8) -> tuple[pd.DataFrame, pd.Dat
 """
 Method to create time sequences from chronologically sorted train and test DataFrames
 """
-def create_sequence(df: pd.DataFrame, features: list[str], label: str = "return_label", window_size: int = 64) -> tuple[np.ndarray, np.ndarray]:
+def create_sequence(df: pd.DataFrame, features: list[str], label: str = "return_label", window_size: int = 64) -> tuple[np.ndarray,np.ndarray]:
   X, y = [], []
 
   #Group the DataFrame by ticker and loop through the groups
@@ -91,3 +89,16 @@ def create_sequence(df: pd.DataFrame, features: list[str], label: str = "return_
       y.append(labels[i+window_size])
   
   return np.array(X), np.array(y)
+
+"""
+Method to get training and testing data for a list of tickers and features with a given split percentage
+"""
+def get_train_test(tickers: list[str] = None, features: list[str] = None, split: int = 0.8) -> tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
+  if features is None:
+    features = ["Open", "High", "Low", "Close", "Volume", "rsi", "ema", "atr_pct"]
+
+  ticker_df = build_dataset(tickers, features) #Get the DataFrame for all given tickers
+  train_df, test_df = split_df(ticker_df, split) #Split the DataFrame into training and testing portions
+  X_train, y_train = create_sequence(train_df, features) #Create training time sequences
+  X_test, y_test = create_sequence(test_df, features) #Create testing time sequences
+  return X_train, X_test, y_train, y_test
