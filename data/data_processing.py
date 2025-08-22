@@ -54,7 +54,7 @@ def build_dataset(tickers: list[str] = None, features: list[str] = None) -> pd.D
 Method to split the DataFrame into training and testing DataFrames chronologically per ticker.
 """
 def split_df(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-  train_list, test_list = [], [] #Lists to hold Series output from iloc()
+  train_list, test_list = [], []
 
   #Group the Dataframe by ticker and loop through each group
   for _, group in df.groupby("ticker"):
@@ -72,3 +72,22 @@ def split_df(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
   test_df = pd.concat(test_list)
 
   return train_df, test_df
+
+"""
+Method to create time sequences from chronologically sorted train and test DataFrames
+"""
+def create_sequence(df: pd.DataFrame, features: list[str], label: str = "return_label", window_size: int = 64) -> tuple[np.ndarray, np.ndarray]:
+  X, y = [], []
+
+  #Group the DataFrame by ticker and loop through the groups
+  for _, group in df.groupby("ticker"):
+    #Get row values for input features for each ticker
+    data = group[features].values
+    #Get row values for label for each ticker
+    labels = group[label].values
+    #Add the feature and label values in a 64 hour sliding window to X and y respectively
+    for i in range(len(data) - window_size):
+      X.append(data[i:i+window_size])
+      y.append(labels[i+window_size])
+  
+  return np.array(X), np.array(y)
