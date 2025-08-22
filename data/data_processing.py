@@ -50,5 +50,25 @@ def build_dataset(tickers: list[str] = None, features: list[str] = None) -> pd.D
 
   return complete_df
 
-test_df = build_dataset()
-print(test_df)
+"""
+Method to split the DataFrame into training and testing DataFrames chronologically per ticker.
+"""
+def split_df(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+  train_list, test_list = [], [] #Lists to hold Series output from iloc()
+
+  #Group the Dataframe by ticker and loop through each group
+  for _, group in df.groupby("ticker"):
+    #80/20 test/train spilt
+    split_ind = int(len(group) * 0.8)
+    """
+    The test data will be the most recent 20% of data for each ticker,
+    while the training data will be the previous data.
+    """
+    train_list.append(group.iloc[:split_ind])
+    test_list.append(group.iloc[split_ind:])
+  
+  #Combine the lists of Series into DataFrames
+  train_df = pd.concat(train_list)
+  test_df = pd.concat(test_list)
+
+  return train_df, test_df
