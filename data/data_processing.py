@@ -2,7 +2,7 @@ import yfinance as yf
 import numpy as np
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from data_download import download_data
+from data.data_download import download_data
 
 
 """
