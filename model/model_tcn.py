@@ -88,11 +88,3 @@ class TCNModel(nn.Module):
     out = self.residual_blocks(x)
     logit_seq = self.head(out) # Model output per timestep in input sequence
     return logit_seq[:, :, -1] # Returns model output for the last timestep only
-
-test_model = TCNModel(in_size=3,
-                      n_filters=[16, 16, 32],
-                      kernel_sizes=[3, 3, 3],
-                      dilations=[1, 2, 4],
-                      n_classes=3)
-
-print(test_model)
