@@ -11,7 +11,7 @@ RSI_PERIOD = 14 #timeperiod parameter for RSI
 EMA_PERIOD = 21 #timeperiod parameter for EMA
 ATR_PERIOD = 14 #timeperiod parameter for ATR
 END = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
-START = END - timedelta(days=365)
+START = END - timedelta(days=729)
 
 """
 Method to verify if a ticker exists
