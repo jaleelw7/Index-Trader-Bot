@@ -34,7 +34,7 @@ def test_loop(model: TCNModel, loader, epoch: int, loss_fn):
 
       test_preds = torch.argmax(test_logits, dim=1)
       accuracy.update(test_preds, y_ts)
-      
+
   print(f"Epoch: {epoch} | Test Loss: {(total_loss/n_samples):.5f} Test Accuracy: {accuracy.compute().item():.4f}")
 
 def train_loop(model: TCNModel, epochs: int, optimizer, loss_fn):
@@ -78,13 +78,3 @@ def train_loop(model: TCNModel, epochs: int, optimizer, loss_fn):
     if epoch % 10 == 0:
       print(f"Epoch: {epoch} | Train Loss: {(total_loss/n_samples):.5f} Train Accuracy: {accuracy.compute().item():.4f}")
       test_loop(model, test_loader, epoch, loss_fn)
-
-model_0 = TCNModel(in_size=8,
-                   n_filters=[16, 16, 32],
-                   kernel_sizes=[3, 3, 3],
-                   dilations=[1, 2, 4],
-                   n_classes=3).to(DEVICE)
-
-loss_fn = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.AdamW(params=model_0.parameters(), lr=1e-3, weight_decay=1e-4)
-train_loop(model_0, N_EPOCHS, optimizer=optimizer, loss_fn=loss_fn)
