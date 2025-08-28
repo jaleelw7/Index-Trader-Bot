@@ -41,18 +41,29 @@ class ResidualBlock(nn.Module):
     if in_size != out_size:
       self.identity_conv = nn.Conv1d(in_channels=in_size, out_channels=out_size, kernel_size=1)
     
+    self.final_act = nn.LeakyReLU(negative_slope=slope)
+    
   def forward(self, x):
     """
     Method that defines the forward computation on input
     """
-    out = self.drop1(self.act1(self.conv1(self.pad1(x)))) # First layer forward pass
-    out = self.drop2(self.act2(self.conv2(self.pad2(out)))) # Second layer forward pass
+    # First layer forward pass
+    out = self.pad1(x)
+    out = self.conv1(out)
+    out = self.act1(out)
+    out = self.drop1(out)
+
+    # Second layer forward pass
+    out = self.pad2(out)
+    out = self.conv2(out)
+    out = self.act2(out)
+    out = self.drop2(out)
     
     # If input (x) and output channel dimensions are not equal, sets the input to the correct dimensions
     if self.identity_conv is not None:
       x = self.identity_conv(x)
     
-    return nn.LeakyReLU(x + out)
+    return self.final_act(x + out)
 
 class TCNModel(nn.Module):
   """
