@@ -20,13 +20,12 @@ def get_weights(train_labels: np.ndarray):
 
   Weights are inversely proportional to class frequency.
   """
-  class_counts = np.bincount(train_labels) # List of number of samples per class
+  class_counts = np.bincount(train_labels, minlength=3) # Array of number of samples per class
   n_samples = class_counts.sum() # Total number of samples
   weights = n_samples / (len(class_counts) * class_counts) # Class weights
-  class_weights  = torch.Tensor(weights, dtype=torch.float32, device=DEVICE)
+  class_weights  = torch.from_numpy(weights.astype("float32")) # Convert class weights to a Tensor
 
-  return class_weights
-
+  return class_weights.to(DEVICE)
 
 def get_loaders(return_weights=True) -> tuple:
   """
@@ -73,11 +72,14 @@ def test_loop(model: TCNModel, loader, epoch: int, loss_fn, acc_metric):
       
   print(f"Epoch: {epoch} | Test Loss: {(total_loss/n_samples):.5f} Test Accuracy: {(acc_metric.compute().item() * 100):.2f}")
 
-def train_loop(model: TCNModel, epochs: int, optimizer, loss_fn, scheduler, acc_metric):
+def train_loop(model: TCNModel, epochs: int, acc_metric,):
   """
   Function to perform the training loop
   """
-  train_loader, test_loader, weights = get_loaders()
+  train_loader, test_loader, weights = get_loaders() # Get DataLoaders and class weights
+  loss_fn = torch.nn.CrossEntropyLoss(weight=weights) # Cross Entropy Loss function
+  optimizer = torch.optim.AdamW(params=model.parameters(), lr=3e-4, weight_decay=1e-3) # AdamW optimizer
+  scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=N_EPOCHS) # Cosine Annealing scheduler
 
   for epoch in range(epochs):
     model.train() # Sets model to training mode
@@ -105,7 +107,7 @@ def train_loop(model: TCNModel, epochs: int, optimizer, loss_fn, scheduler, acc_
       y_preds = torch.argmax(y_logits, dim=1) # Get prediction labels from training data
       acc_metric.update(y_preds, y_tr) # Get model accuracy on training data
     
-    # Prints the accuracy and loss on training and test data every 100 epochs
+    # Prints the accuracy and loss on training and test data every 50 epochs
     if epoch % 50 == 0:
       print(f"Epoch: {epoch} | Learn Rate {optimizer.param_groups[0]["lr"]} | " 
             f"Train Loss: {(total_loss/n_samples):.5f} Train Accuracy: {(acc_metric.compute().item() * 100):.2f}")
