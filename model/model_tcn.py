@@ -12,7 +12,7 @@ class ResidualBlock(nn.Module):
                out_size: int,
                dilation: int,
                kernel_size: int,
-               dropout: float = 0.2,
+               dropout: float = 0.4,
                slope: float = 0.01):
     super().__init__()
     self.input_size = in_size
@@ -76,7 +76,8 @@ class TCNModel(nn.Module):
                n_filters: list[int], 
                kernel_sizes: list[int], 
                dilations: list[int],
-               n_classes: int):
+               n_classes: int,
+               dropout: float = 0.4):
     super().__init__()
     # Checks if n_filters, kernel_sizes, and dilations have the same length. Raises a ValueError if False
     if not(len(n_filters) == len(kernel_sizes) == len(dilations)):
