@@ -11,6 +11,7 @@ and standard deviation over the number previous intervals given by window_len
 """
 def zscore_norm(df: pd.DataFrame, features: list[str], window_size: int = 31) -> pd.DataFrame:
   norm_df = df.copy()
+  norm_df.sort_values(["ticker", "Datetime"], inplace=True)
   grouped_df = df.groupby("ticker", group_keys=False)
 
   for f in features:
@@ -18,6 +19,7 @@ def zscore_norm(df: pd.DataFrame, features: list[str], window_size: int = 31) ->
     rolling_std = grouped_df[f].transform(lambda x: x.rolling(window_size, min_periods=window_size).std(ddof=0))
     #A very small constant is added to the std to prevent division by zero errors
     norm_df[f] = (norm_df[f] - rolling_mean) / (rolling_std + 1e-9)
+    norm_df[f] = norm_df[f].shift(1)
   
   return norm_df.dropna()
 
@@ -37,7 +39,7 @@ def build_dataset(tickers: list[str], features: list[str]) -> pd.DataFrame:
   #Maintain chronological order by sorting by datetime index
   complete_df.sort_index(inplace=True)
   #Replace the datetime index with a numerical index
-  complete_df.reset_index(drop=True, inplace=True)
+  complete_df.reset_index(inplace=True)
 
   #Normalize input features
   complete_df = zscore_norm(complete_df, features)
