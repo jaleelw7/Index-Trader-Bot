@@ -49,25 +49,28 @@ def build_dataset(tickers: list[str], features: list[str]) -> pd.DataFrame:
 """
 Method to split the DataFrame into training and testing DataFrames chronologically per ticker.
 """
-def split_df(df: pd.DataFrame, split: float) -> tuple[pd.DataFrame, pd.DataFrame]:
-  train_list, test_list = [], []
+def split_df(df: pd.DataFrame, train_split: float, val_split: float) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+  train_list, test_list, val_list = [], [], []
 
   #Group the Dataframe by ticker and loop through each group
   for _, group in df.groupby("ticker"):
-    #80/20 test/train spilt
-    split_ind = int(len(group) * split)
+    n = len(group)
+    #train split
+    i_train = int(n * train_split)
+    i_val = int(n * val_split)
     """
-    The test data will be the most recent 20% of data for each ticker,
-    while the training data will be the previous data.
+    Default split: 70% train, 15% validation, 15% test
     """
-    train_list.append(group.iloc[:split_ind])
-    test_list.append(group.iloc[split_ind:])
+    train_list.append(group.iloc[:i_train])
+    val_list.append(group.iloc[i_train:i_train+i_val])
+    test_list.append(group.iloc[i_train+i_val:])
   
   #Combine the lists of Series into DataFrames
   train_df = pd.concat(train_list)
+  val_df = pd.concat(val_list)
   test_df = pd.concat(test_list)
 
-  return train_df, test_df
+  return train_df, val_df, test_df
 
 """
 Method to create time sequences from chronologically sorted train and test DataFrames
@@ -91,7 +94,10 @@ def create_sequence(df: pd.DataFrame, features: list[str], label: str = "return_
 """
 Method to get training and testing data for a list of tickers and features with a given split percentage
 """
-def get_train_test(tickers: list[str] = None, features: list[str] = None, split: int = 0.8) -> tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
+def get_train_test_val(tickers: list[str] = None, 
+                   features: list[str] = None, 
+                   train_split: int = 0.7, 
+                   val_split = 0.15) -> tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
   #Default tickers and input features
   if tickers is None:
     tickers = ["SPY", "QQQ", "DIA", "IWM", "VTI"]
@@ -99,7 +105,8 @@ def get_train_test(tickers: list[str] = None, features: list[str] = None, split:
     features = ["Open", "High", "Low", "Close", "Volume", "rsi", "ema", "atr_pct"]
 
   ticker_df = build_dataset(tickers, features) #Get the DataFrame for all given tickers
-  train_df, test_df = split_df(ticker_df, split) #Split the DataFrame into training and testing portions
+  train_df, test_df, val_df = split_df(ticker_df, train_split, val_split) #Split the DataFrame into training and testing portions
   X_train, y_train = create_sequence(train_df, features) #Create training time sequences
+  X_val, y_val = create_sequence(val_df, features) #Create validation time sequences
   X_test, y_test = create_sequence(test_df, features) #Create testing time sequences
-  return X_train, X_test, y_train, y_test
+  return X_train, X_val, X_test, y_train, y_val, y_test
