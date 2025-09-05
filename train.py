@@ -1,19 +1,22 @@
 import torch
-from torchmetrics import Accuracy
+from torchmetrics import Accuracy, Precision, Recall
 from model.model_tcn import TCNModel
 from train_aux import RANDOM_SEED, N_EPOCHS, PATIENCE, DEVICE, get_loaders # File with helper functions and constants
 
 # Setting RNG seed
 torch.manual_seed(RANDOM_SEED)
 
-def test_loop(model: TCNModel, loader, loss_fn, acc_metric):
+def test_loop(model: TCNModel, loader, loss_fn, accuracy, precision, recall):
   """
   Function to calculate and print the loss and accuracy of model predictions on test data
   """
   model.eval() # Sets the model to evaluation mode
   total_loss = 0.0
   n_samples = 0
-  acc_metric.reset()
+  # Reset metrics
+  accuracy.reset()
+  precision.reset()
+  recall.reset()
   # Use torch.inference_mode to disable gradient tracking
   with torch.inference_mode():
     # Calculates loss and accuracy using training Dataset
@@ -26,12 +29,19 @@ def test_loop(model: TCNModel, loader, loss_fn, acc_metric):
       n_samples += x_ts.size(0)
 
       test_preds = torch.argmax(test_logits, dim=1)
-      acc_metric.update(test_preds, y_ts)
+      # Get metrics on testing data
+      accuracy.update(test_preds, y_ts)
+      precision.update(test_preds, y_ts)
+      recall.update(test_preds, y_ts)
+
+      test_acc = accuracy.compute().item() * 100
+      test_prec = precision.compute().item() * 100
+      test_rec = recall.compute().item() * 100
       
   print(f"\nFINAL TEST\n"
-        f"Test Loss: {(total_loss/n_samples):.5f} Test Accuracy: {(acc_metric.compute().item() * 100):.2f}")
+        f"Loss: {(total_loss/n_samples):.5f} Accuracy: {test_acc:.2f} Precision: {test_prec:.2f} Recall {test_rec:.2f}")
 
-def train_loop(model: TCNModel, epochs: int, acc_metric):
+def train_loop(model: TCNModel, epochs: int):
   """
   Function to perform the training loop
   """
@@ -40,6 +50,11 @@ def train_loop(model: TCNModel, epochs: int, acc_metric):
   loss_fn = torch.nn.CrossEntropyLoss(weight=weights, label_smoothing=0.1) # Cross Entropy Loss function
   optimizer = torch.optim.AdamW(params=model.parameters(), lr=3e-4, weight_decay=1e-3) # AdamW optimizer
   scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=N_EPOCHS) # Cosine Annealing scheduler
+
+  # Torchmetrics metrics
+  accuracy = Accuracy(task="multiclass", num_classes=3).to(DEVICE)
+  precision = Precision(task="multiclass", num_classes=3).to(DEVICE)
+  recall = Recall(task="multiclass", num_classes=3).to(DEVICE)
 
   best_state = None # Model state with the best validation loss
   best_loss = float("inf") # Lowest validation loss
@@ -50,7 +65,10 @@ def train_loop(model: TCNModel, epochs: int, acc_metric):
     model.train() # Sets model to training mode
     total_train_loss = 0.0 # Stores cumulative loss for each batch
     n_train_samples = 0 # Number of samples per batch
-    acc_metric.reset() # Resets accuracy metric
+    # Reset metrics
+    accuracy.reset()
+    precision.reset()
+    recall.reset()
 
     for x_tr, y_tr in train_loader:
       x_tr, y_tr = x_tr.to(DEVICE), y_tr.to(DEVICE) # Move data from DataLoaders to correct device
@@ -67,14 +85,19 @@ def train_loop(model: TCNModel, epochs: int, acc_metric):
       total_train_loss += loss.item() * x_tr.size(0) # Loss is weighted by batch size
       n_train_samples += x_tr.size(0)
       y_preds = torch.argmax(y_logits, dim=1) # Get prediction labels from training data
-      acc_metric.update(y_preds, y_tr) # Get model accuracy on training data
+      accuracy.update(y_preds, y_tr) # Get model accuracy on training data
+      precision.update(y_preds, y_tr) # Get precision accuracy on training data
+      recall.update(y_preds, y_tr) # Get model recall on training data
     
     train_loss = total_train_loss/n_train_samples
-    train_acc = acc_metric.compute().item() * 100
+    train_acc, train_prec, train_rec = accuracy.compute().item() * 100, precision.compute().item() * 100, recall.compute().item() * 100
 
     """Validation"""
     model.eval()
-    acc_metric.reset() # Reset accuracy
+    # Reset metrics
+    accuracy.reset()
+    precision.reset()
+    recall.reset()
     total_val_loss, n_val_samples = 0.0, 0
 
     with torch.inference_mode(): # Disable gradient tracking
@@ -86,18 +109,20 @@ def train_loop(model: TCNModel, epochs: int, acc_metric):
         total_val_loss = val_loss.item() * x_vl.size(0)
         n_val_samples += x_vl.size(0)
         val_preds = torch.argmax(val_logits, dim=1)
-        acc_metric.update(val_preds, y_vl)
+        accuracy.update(val_preds, y_vl)
+        precision.update(val_preds, y_vl)
+        recall.update(val_preds, y_vl)
       
     val_loss = total_val_loss/n_val_samples
-    val_acc = acc_metric.compute().item() * 100
-    
+    val_acc, val_prec, val_rec = accuracy.compute().item() * 100, precision.compute().item() * 100, recall.compute().item() * 100
+
     scheduler.step() # Step the scheduler
     
     # Prints the accuracy and loss on training and test data every 50 epochs
-    if epoch % 50 == 0:
-      print(f"Epoch: {epoch} | Learn Rate {optimizer.param_groups[0]["lr"]}\n" 
-            f"Train Loss: {train_loss:.5f} Train Accuracy: {train_acc:.2f}"
-            f" | Validation Loss: {val_loss:5f} Validation Accuracy: {val_acc:.2f}")
+    if epoch % 50 == 0 or epoch == 1:
+      print(f"Epoch: {epoch} | Learn Rate {optimizer.param_groups[0]["lr"]}" 
+            f"\nTraining | Loss: {train_loss:.5f} Accuracy: {train_acc:.2f} Precision: {train_prec:.2f} Recall: {train_rec:.2f}"
+            f"\nValidation | Loss: {val_loss:5f} Accuracy: {val_acc:.2f} Precision: {val_prec:.2f} Recall: {val_rec:.2f}")
     
     """Detect overfitting using validation loss"""
     if val_loss < best_loss - 1e-6: # If no overfitting is detected, update the best validation loss and wait
@@ -115,15 +140,4 @@ def train_loop(model: TCNModel, epochs: int, acc_metric):
     model.load_state_dict(best_state)
   
   """Testing"""
-  test_loop(model, test_loader, loss_fn, acc_metric) # Run the best model state on the test 
-
-model_0 = TCNModel(in_size=8,
-                      n_filters=[32, 32, 32],
-                      kernel_sizes=[3, 3, 3],
-                      dilations=[1, 2, 4],
-                      n_classes=3,
-                      dropout=0.4)
-
-accuracy = Accuracy(task="multiclass", num_classes=3).to(DEVICE)
-
-train_loop(model_0, N_EPOCHS, acc_metric=accuracy)
+  test_loop(model, test_loader, loss_fn, accuracy, precision, recall) # Run the best model state on the test 
