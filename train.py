@@ -1,55 +1,10 @@
 import torch
-import numpy as np
-from torch.utils.data import DataLoader
 from torchmetrics import Accuracy
-from data.data_processing import get_train_test_val
-from data.dataset_class import IndexDataset
 from model.model_tcn import TCNModel
+from train_aux import RANDOM_SEED, N_EPOCHS, PATIENCE, DEVICE, get_loaders # File with helper functions and constants
 
-
-RANDOM_SEED = 99 # RNG seed
-N_EPOCHS = 1000 # Number of loops to train 
-PATIENCE = 10 # Number of epochs to wait for validation loss improvement
-BATCH_SIZE = 64 # Batch size for DataLoaders
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # Sets device to GPU if available, CPU otherwise
 # Setting RNG seed
 torch.manual_seed(RANDOM_SEED)
-
-def get_weights(train_labels: np.ndarray):
-  """
-  Function to calculate class weights for training data.
-
-  Weights are inversely proportional to class frequency.
-  """
-  class_counts = np.bincount(train_labels, minlength=3) # Array of number of samples per class
-  n_samples = class_counts.sum() # Total number of samples
-  weights = n_samples / (len(class_counts) * class_counts) # Class weights
-  class_weights  = torch.from_numpy(weights.astype("float32")) # Convert class weights to a Tensor
-
-  return class_weights.to(DEVICE)
-
-def get_loaders(return_weights=True) -> tuple:
-  """
-  Function to retrieve training and testing data and load it into DataLoaders
-
-  If return_weights parameter is True, also returns class weights
-  """
-  X_train, X_val, X_test, y_train, y_val, y_test = get_train_test_val() # Gets training, validation and testing data
-  # Creates dataset objects from training, validation and testing data
-  train_dataset = IndexDataset(X_train, y_train)
-  val_dataset = IndexDataset(X_val, y_val)
-  test_dataset = IndexDataset(X_test, y_test)
-  # Creates DataLoaders from dataset objects
-  train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-  val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
-  test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
-
-  # If return_weights is true, calculates and returns class weights, otherwise only returns DataLoaders
-  if return_weights:
-    class_weights = get_weights(y_train)
-    return train_loader, val_loader, test_loader, class_weights
-  else:
-    return train_loader, val_loader, test_loader
 
 def test_loop(model: TCNModel, loader, loss_fn, acc_metric):
   """
@@ -139,7 +94,7 @@ def train_loop(model: TCNModel, epochs: int, acc_metric):
     scheduler.step() # Step the scheduler
     
     # Prints the accuracy and loss on training and test data every 50 epochs
-    if epoch % 50 == 0 or epoch == 1:
+    if epoch % 50 == 0:
       print(f"Epoch: {epoch} | Learn Rate {optimizer.param_groups[0]["lr"]}\n" 
             f"Train Loss: {train_loss:.5f} Train Accuracy: {train_acc:.2f}"
             f" | Validation Loss: {val_loss:5f} Validation Accuracy: {val_acc:.2f}")
@@ -160,9 +115,8 @@ def train_loop(model: TCNModel, epochs: int, acc_metric):
     model.load_state_dict(best_state)
   
   """Testing"""
-  test_loop(model, test_loader, loss_fn, acc_metric)
+  test_loop(model, test_loader, loss_fn, acc_metric) # Run the best model state on the test 
 
-      
 model_0 = TCNModel(in_size=8,
                       n_filters=[32, 32, 32],
                       kernel_sizes=[3, 3, 3],
