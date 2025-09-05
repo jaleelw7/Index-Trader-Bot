@@ -9,7 +9,7 @@ from data.data_download import download_data
 Normalizes features using rolling z-score. The z-score is computed using the mean
 and standard deviation over the number previous intervals given by window_len
 """
-def zscore_norm(df: pd.DataFrame, features: list[str], window_size: int = 31) -> pd.DataFrame:
+def zscore_norm(df: pd.DataFrame, features: list[str], window_size: int = 96) -> pd.DataFrame:
   norm_df = df.copy()
   norm_df.sort_values(["ticker", "Datetime"], inplace=True)
   grouped_df = df.groupby("ticker", group_keys=False)
@@ -75,7 +75,7 @@ def split_df(df: pd.DataFrame, train_split: float, val_split: float) -> tuple[pd
 """
 Method to create time sequences from chronologically sorted train and test DataFrames
 """
-def create_sequence(df: pd.DataFrame, features: list[str], label: str = "return_label", window_size: int = 64) -> tuple[np.ndarray,np.ndarray]:
+def create_sequence(df: pd.DataFrame, features: list[str], label: str = "return_label", window_size: int = 96) -> tuple[np.ndarray,np.ndarray]:
   X, y = [], []
 
   #Group the DataFrame by ticker and loop through the groups
@@ -84,7 +84,7 @@ def create_sequence(df: pd.DataFrame, features: list[str], label: str = "return_
     data = group[features].values
     #Get row values for label for each ticker
     labels = group[label].values
-    #Add the feature and label values in a 64 hour sliding window to X and y respectively
+    #Add the feature and label values in a sliding window to X and y respectively
     for i in range(len(data) - window_size):
       X.append(data[i:i+window_size])
       y.append(labels[i+window_size])
