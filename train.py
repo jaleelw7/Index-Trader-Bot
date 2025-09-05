@@ -2,13 +2,14 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader
 from torchmetrics import Accuracy
-from data.data_processing import get_train_test
+from data.data_processing import get_train_test_val
 from data.dataset_class import IndexDataset
 from model.model_tcn import TCNModel
 
 
 RANDOM_SEED = 99 # RNG seed
-N_EPOCHS = 1000 # Number of loops to train for
+N_EPOCHS = 1000 # Number of loops to train 
+PATIENCE = 10 # Number of epochs to wait for validation loss improvement
 BATCH_SIZE = 64 # Batch size for DataLoaders
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # Sets device to GPU if available, CPU otherwise
 # Setting RNG seed
@@ -33,22 +34,24 @@ def get_loaders(return_weights=True) -> tuple:
 
   If return_weights parameter is True, also returns class weights
   """
-  X_train, X_test, y_train, y_test = get_train_test() # Gets training and testing data
-  # Creates dataset objects from training and testing data
+  X_train, X_val, X_test, y_train, y_val, y_test = get_train_test_val() # Gets training, validation and testing data
+  # Creates dataset objects from training, validation and testing data
   train_dataset = IndexDataset(X_train, y_train)
+  val_dataset = IndexDataset(X_val, y_val)
   test_dataset = IndexDataset(X_test, y_test)
   # Creates DataLoaders from dataset objects
   train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+  val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
   test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
   # If return_weights is true, calculates and returns class weights, otherwise only returns DataLoaders
   if return_weights:
     class_weights = get_weights(y_train)
-    return train_loader, test_loader, class_weights
+    return train_loader, val_loader, test_loader, class_weights
   else:
-    return train_loader, test_loader
+    return train_loader, val_loader, test_loader
 
-def test_loop(model: TCNModel, loader, epoch: int, loss_fn, acc_metric):
+def test_loop(model: TCNModel, loader, loss_fn, acc_metric):
   """
   Function to calculate and print the loss and accuracy of model predictions on test data
   """
@@ -70,21 +73,28 @@ def test_loop(model: TCNModel, loader, epoch: int, loss_fn, acc_metric):
       test_preds = torch.argmax(test_logits, dim=1)
       acc_metric.update(test_preds, y_ts)
       
-  print(f"Epoch: {epoch} | Test Loss: {(total_loss/n_samples):.5f} Test Accuracy: {(acc_metric.compute().item() * 100):.2f}")
+  print(f"\nFINAL TEST\n"
+        f"Test Loss: {(total_loss/n_samples):.5f} Test Accuracy: {(acc_metric.compute().item() * 100):.2f}")
 
-def train_loop(model: TCNModel, epochs: int, acc_metric,):
+def train_loop(model: TCNModel, epochs: int, acc_metric):
   """
   Function to perform the training loop
   """
-  train_loader, test_loader, weights = get_loaders() # Get DataLoaders and class weights
-  loss_fn = torch.nn.CrossEntropyLoss(weight=weights) # Cross Entropy Loss function
+  model.to(DEVICE) # Move model to correct device
+  train_loader, val_loader, test_loader, weights = get_loaders() # Get DataLoaders and class weights
+  loss_fn = torch.nn.CrossEntropyLoss(weight=weights, label_smoothing=0.1) # Cross Entropy Loss function
   optimizer = torch.optim.AdamW(params=model.parameters(), lr=3e-4, weight_decay=1e-3) # AdamW optimizer
   scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=N_EPOCHS) # Cosine Annealing scheduler
 
-  for epoch in range(epochs):
+  best_state = None # Model state with the best validation loss
+  best_loss = float("inf") # Lowest validation loss
+  wait_epochs = 0 # Number of epochs since validation loss improvement
+
+  """Training"""
+  for epoch in range(1, epochs + 1):
     model.train() # Sets model to training mode
-    total_loss = 0.0 # Stores cumulative loss for each batch
-    n_samples = 0 # Number of samples per batch
+    total_train_loss = 0.0 # Stores cumulative loss for each batch
+    n_train_samples = 0 # Number of samples per batch
     acc_metric.reset() # Resets accuracy metric
 
     for x_tr, y_tr in train_loader:
@@ -98,17 +108,68 @@ def train_loop(model: TCNModel, epochs: int, acc_metric,):
       loss.backward() # Backpropogate
       optimizer.step() # Gradient descent
 
-      if scheduler is not None:
-        scheduler.step() # Step scheduler if it exists
-
       # Update loss and accuracy
-      total_loss += loss.item() * x_tr.size(0) # Loss is weighted by batch size
-      n_samples += x_tr.size(0)
+      total_train_loss += loss.item() * x_tr.size(0) # Loss is weighted by batch size
+      n_train_samples += x_tr.size(0)
       y_preds = torch.argmax(y_logits, dim=1) # Get prediction labels from training data
       acc_metric.update(y_preds, y_tr) # Get model accuracy on training data
     
+    train_loss = total_train_loss/n_train_samples
+    train_acc = acc_metric.compute().item() * 100
+
+    """Validation"""
+    model.eval()
+    acc_metric.reset() # Reset accuracy
+    total_val_loss, n_val_samples = 0.0, 0
+
+    with torch.inference_mode(): # Disable gradient tracking
+      for x_vl, y_vl in val_loader:
+        x_vl, y_vl = x_vl.to(DEVICE), y_vl.to(DEVICE)
+        x_vl = x_vl.transpose(1, 2)
+        val_logits = model(x_vl)
+        val_loss = loss_fn(val_logits, y_vl)
+        total_val_loss = val_loss.item() * x_vl.size(0)
+        n_val_samples += x_vl.size(0)
+        val_preds = torch.argmax(val_logits, dim=1)
+        acc_metric.update(val_preds, y_vl)
+      
+    val_loss = total_val_loss/n_val_samples
+    val_acc = acc_metric.compute().item() * 100
+    
+    scheduler.step() # Step the scheduler
+    
     # Prints the accuracy and loss on training and test data every 50 epochs
-    if epoch % 50 == 0:
-      print(f"Epoch: {epoch} | Learn Rate {optimizer.param_groups[0]["lr"]} | " 
-            f"Train Loss: {(total_loss/n_samples):.5f} Train Accuracy: {(acc_metric.compute().item() * 100):.2f}")
-      test_loop(model, test_loader, epoch, loss_fn, acc_metric)
+    if epoch % 50 == 0 or epoch == 1:
+      print(f"Epoch: {epoch} | Learn Rate {optimizer.param_groups[0]["lr"]}\n" 
+            f"Train Loss: {train_loss:.5f} Train Accuracy: {train_acc:.2f}"
+            f" | Validation Loss: {val_loss:5f} Validation Accuracy: {val_acc:.2f}")
+    
+    """Detect overfitting using validation loss"""
+    if val_loss < best_loss - 1e-6: # If no overfitting is detected, update the best validation loss and wait
+      best_loss = val_loss
+      wait_epochs = 0
+      best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()} # Stores a model state with no overfitting
+    else: # If the validation loss increases after an epoch, increment the wait
+      wait_epochs += 1
+      if wait_epochs >= PATIENCE: # If the wait epochs reach the patience limit, end training early
+        print(f"Stopping training early at Epoch {epoch} (Best Validation Loss: {best_loss:.5f})")
+        break
+  
+  #Load the best model state for testing
+  if best_state is not None:
+    model.load_state_dict(best_state)
+  
+  """Testing"""
+  test_loop(model, test_loader, loss_fn, acc_metric)
+
+      
+model_0 = TCNModel(in_size=8,
+                      n_filters=[32, 32, 32],
+                      kernel_sizes=[3, 3, 3],
+                      dilations=[1, 2, 4],
+                      n_classes=3,
+                      dropout=0.4)
+
+accuracy = Accuracy(task="multiclass", num_classes=3).to(DEVICE)
+
+train_loop(model_0, N_EPOCHS, acc_metric=accuracy)
