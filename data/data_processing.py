@@ -92,7 +92,7 @@ def create_sequence(df: pd.DataFrame, features: list[str], label: str = "return_
   return np.array(X), np.array(y)
 
 """
-Method to get training and testing data for a list of tickers and features with a given split percentage
+Method to get training, validation and testing data for a list of tickers and features with a given split percentage
 """
 def get_train_test_val(tickers: list[str] = None, 
                    features: list[str] = None, 
@@ -105,7 +105,7 @@ def get_train_test_val(tickers: list[str] = None,
     features = ["Open", "High", "Low", "Close", "Volume", "rsi", "ema", "atr_pct"]
 
   ticker_df = build_dataset(tickers, features) #Get the DataFrame for all given tickers
-  train_df, test_df, val_df = split_df(ticker_df, train_split, val_split) #Split the DataFrame into training and testing portions
+  train_df, val_df, test_df = split_df(ticker_df, train_split, val_split) #Split the DataFrame into training and testing portions
   X_train, y_train = create_sequence(train_df, features) #Create training time sequences
   X_val, y_val = create_sequence(val_df, features) #Create validation time sequences
   X_test, y_test = create_sequence(test_df, features) #Create testing time sequences
