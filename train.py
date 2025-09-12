@@ -1,7 +1,7 @@
 import torch
 from torchmetrics import Accuracy, Precision, Recall
 from model.model_tcn import TCNModel
-from train_aux import RANDOM_SEED, N_EPOCHS, PATIENCE, DEVICE, get_loaders # File with helper functions and constants
+from train_aux import RANDOM_SEED, N_EPOCHS, PATIENCE, DEVICE, get_loaders, save_model # File with helper functions and constants
 
 # Setting RNG seed
 torch.manual_seed(RANDOM_SEED)
@@ -47,8 +47,8 @@ def train_loop(model: TCNModel, epochs: int):
   """
   model.to(DEVICE) # Move model to correct device
   train_loader, val_loader, test_loader, weights = get_loaders() # Get DataLoaders and class weights
-  loss_fn = torch.nn.CrossEntropyLoss(weight=weights, label_smoothing=0.1) # Cross Entropy Loss function
-  optimizer = torch.optim.AdamW(params=model.parameters(), lr=3e-4, weight_decay=1e-3) # AdamW optimizer
+  loss_fn = torch.nn.CrossEntropyLoss(weight=weights) # Cross Entropy Loss function
+  optimizer = torch.optim.AdamW(params=model.parameters(), lr=1e-4, weight_decay=1e-3) # AdamW optimizer
   scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=N_EPOCHS) # Cosine Annealing scheduler
 
   # Torchmetrics metrics
@@ -140,4 +140,7 @@ def train_loop(model: TCNModel, epochs: int):
     model.load_state_dict(best_state)
   
   """Testing"""
-  test_loop(model, test_loader, loss_fn, accuracy, precision, recall) # Run the best model state on the test 
+  test_loop(model, test_loader, loss_fn, accuracy, precision, recall) # Run the best model state on the test
+
+  # Save the model
+  # save_model(model)
