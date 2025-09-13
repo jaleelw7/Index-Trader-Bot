@@ -72,11 +72,11 @@ class TCNModel(nn.Module):
   Predicts one label per time window
   """
   def __init__(self, 
-               in_size: int, 
-               n_filters: list[int], 
-               kernel_sizes: list[int], 
-               dilations: list[int],
-               n_classes: int,
+               in_size: int = 8, 
+               n_filters: list[int] = [32, 32, 64], 
+               kernel_sizes: list[int] = [3, 3, 3], 
+               dilations: list[int] = [1, 2, 4],
+               n_classes: int = 3,
                dropout: float = 0.4):
     super().__init__()
     # Checks if n_filters, kernel_sizes, and dilations have the same length. Raises a ValueError if False
