@@ -2,7 +2,7 @@ import yfinance as yf
 import numpy as np
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from data.data_download import download_data
+from data_download import download_data
 
 
 """
@@ -25,17 +25,25 @@ def zscore_norm(df: pd.DataFrame, features: list[str], window_size: int = 96) ->
 
 """
 Method to combine the dataframes from multiple tickers into the complete dataset.
+
+If single_ticker is True, downloads the dataframe for a single ticker.
 """
-def build_dataset(tickers: list[str], features: list[str]) -> pd.DataFrame:
-  #Download ticker data in parallel instead of sequentially to reduce wait time
-  ticker_dfs = []
-  with ThreadPoolExecutor(max_workers=3) as exe:
-    futures = {exe.submit(download_data, t): t for t in tickers}
-    for f in as_completed(futures):
-      ticker_dfs.append(f.result())
-  
-  #Combine the list of ticker DataFrames into one DataFrame
-  complete_df = pd.concat(ticker_dfs, axis=0, ignore_index=False)
+def build_dataset(tickers: list[str], features: list[str], single_ticker=False) -> pd.DataFrame:
+
+  if single_ticker:
+    complete_df = download_data(tickers[0])
+
+  else:
+    #Download ticker data in parallel instead of sequentially to reduce wait time
+    ticker_dfs = []
+    with ThreadPoolExecutor(max_workers=3) as exe:
+      futures = {exe.submit(download_data, t): t for t in tickers}
+      for f in as_completed(futures):
+        ticker_dfs.append(f.result())
+
+    #Combine the list of ticker DataFrames into one DataFrame
+    complete_df = pd.concat(ticker_dfs, axis=0, ignore_index=False)
+
   #Maintain chronological order by sorting by datetime index
   complete_df.sort_index(inplace=True)
   #Replace the datetime index with a numerical index
@@ -110,3 +118,12 @@ def get_train_test_val(tickers: list[str] = None,
   X_val, y_val = create_sequence(val_df, features) #Create validation time sequences
   X_test, y_test = create_sequence(test_df, features) #Create testing time sequences
   return X_train, X_val, X_test, y_train, y_val, y_test
+
+def get_sequence(ticker: str) -> tuple[np.ndarray, np.ndarray]:
+  """
+  Method to get time sequences for user predictions on single tickers
+  """
+  features = ["Open", "High", "Low", "Close", "Volume", "rsi", "ema", "atr_pct"]
+  ticker_df = build_dataset([ticker], features, single_ticker=True)
+  X, y = create_sequence(ticker_df, features)
+  return X, y
