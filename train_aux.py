@@ -14,7 +14,9 @@ PATIENCE = 5 # Number of epochs to wait for validation loss improvement
 BATCH_SIZE = 64 # Batch size for DataLoaders
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # Sets device to GPU if available, CPU otherwise
 SAVE_DIR = Path("artifacts/models")
+SAVE_DIR.mkdir(parents=True, exist_ok=True)
 MODEL_FILE = "index_tcn_v1.pth"
+SAVE_PATH = SAVE_DIR / MODEL_FILE
 
 def get_weights(train_labels: np.ndarray):
   """
@@ -56,8 +58,6 @@ def save_model(model: TCNModel):
   """
   Function to save the model to artifacts/models directory
   """
-  SAVE_DIR.mkdir(parents=True, exist_ok=True)
-  SAVE_PATH = SAVE_DIR / MODEL_FILE
   try:
     torch.save(obj=model.state_dict(), f=SAVE_PATH)
     print(f"Model saved to {SAVE_PATH} successfully.")
