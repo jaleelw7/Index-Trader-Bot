@@ -7,7 +7,7 @@ def get_candles(ticker: str, interval: str = "30m", period: str = "30d") -> pd.D
   """
   Downloads ticker data for frontend display
   """
-  df = download_data(ticker, interval=interval, period=period)
+  df = download_data(ticker, interval=interval, period=period, for_train=False)
   if df is None or df.empty: return df  # Prevents errors from operating on empty or null DataFrame
 
   df.sort_values("Datetime", inplace=True)
