@@ -11,4 +11,3 @@ CLASS_ORDER = ["Sell", "Hold", "Buy"]
 API_HOST = "0.0.0.0"
 API_PORT = 8000
 CORS_ORIGINS = "*"
-CACHE_TIME = 300 # How long ticker data is cached
