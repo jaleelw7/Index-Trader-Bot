@@ -13,7 +13,7 @@ MODEL.load_state_dict(torch.load(SAVE_PATH, weights_only=True))
 MODEL.eval() # Set to evaluation mode for predictions
 
 
-def build_input(df: pd.DataFrame) -> dict:
+def build_input(df: pd.DataFrame) -> torch.Tensor:
   """
   Builds input tensor for the model
   """
@@ -30,4 +30,4 @@ def pass_input(X: torch.Tensor) -> torch.Tensor:
     logits = MODEL(X)
     probs = torch.softmax(logits, dim=1) # Get probabilities for each class
     probs = probs.squeeze(0).tolist() # Remove the dimension for batch size and converts the tensor to a 2D List
-    return {"probabilites": dict(zip(CLASS_ORDER, probs))} # Return probabilites for each class as a nested dictionary
+  return {"probabilites": dict(zip(CLASS_ORDER, probs))} # Return probabilites for each class as a nested dictionary
