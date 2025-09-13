@@ -118,12 +118,3 @@ def get_train_test_val(tickers: list[str] = None,
   X_val, y_val = create_sequence(val_df, features) #Create validation time sequences
   X_test, y_test = create_sequence(test_df, features) #Create testing time sequences
   return X_train, X_val, X_test, y_train, y_val, y_test
-
-def get_sequence(ticker: str) -> tuple[np.ndarray, np.ndarray]:
-  """
-  Method to get time sequences for user predictions on single tickers
-  """
-  features = ["Open", "High", "Low", "Close", "Volume", "rsi", "ema", "atr_pct"]
-  ticker_df = build_dataset([ticker], features, single_ticker=True)
-  X, y = create_sequence(ticker_df, features)
-  return X, y
