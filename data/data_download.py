@@ -27,7 +27,13 @@ def ticker_exists(ticker: str) -> bool:
 Method to download the data from each index. For loop is added to retry downloads in case
 of yfinance failure.
 """
-def download_data(ticker: str, max_retries: int = 3, backoff: float = 2.0) -> pd.DataFrame:
+def download_data(ticker: str,
+                  max_retries: int = 3,
+                  backoff: float = 2.0,
+                  interval: str = "60m",
+                  period: str = "ytd",
+                  for_train: bool =True) -> pd.DataFrame:
+  
   #Checks if ticker exists, raises exception if false
   if not ticker_exists(ticker):
     raise ValueError(f"Ticker: {ticker} does not exist.")
@@ -35,13 +41,21 @@ def download_data(ticker: str, max_retries: int = 3, backoff: float = 2.0) -> pd
   #Download data for each ticker individually
   for attempt in range(1, max_retries + 1):
     try:
-      ticker_df = yf.download(ticker,
-                              start=START,
-                              end=END,
-                              interval="60m",
-                              progress=False,
-                              threads=False)
+      if for_train:
+        ticker_df = yf.download(ticker,
+                                start=START,
+                                end=END,
+                                interval="60m",
+                                progress=False,
+                                threads=False)
       
+      else:
+        ticker_df = yf.download(ticker,
+                                period=period,
+                                interval=interval,
+                                progress=False,
+                                threads=False)
+       
       #Flattens DataFrame columns if multi-index
       ticker_df = ticker_df.xs(ticker, axis=1, level=1)
 
