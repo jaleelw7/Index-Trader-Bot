@@ -21,7 +21,7 @@ def build_input(df: pd.DataFrame) -> torch.Tensor:
   x = torch.from_numpy(x).unsqueeze(0)
   return x.to(DEVICE)
 
-def pass_input(X: torch.Tensor) -> torch.Tensor:
+def pass_input(X: torch.Tensor) -> dict:
   """
   Passes input tensor into the saved model
   """
