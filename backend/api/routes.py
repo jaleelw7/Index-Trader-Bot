@@ -16,7 +16,7 @@ def candles():
   
   ticker_df = get_candles(t, interval, period) # Download ticker data
   # Returns HTTP 404 if no ticker data was obtained
-  if not ticker_df or ticker_df.empty: return jsonify({"error": f"No data for {t}"}), 404
+  if ticker_df is None or ticker_df.empty: return jsonify({"error": f"No data for {t}"}), 404
 
   # Returns JSON object of ticker data
   return jsonify({"ticker": t, "data": serialize_candles(ticker_df)})

@@ -1,5 +1,5 @@
-from api import create_app
-from config import API_HOST, API_PORT
+from backend.api import create_app
+from backend.config import API_HOST, API_PORT
 
 """
 API entry point
