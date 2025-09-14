@@ -7,6 +7,9 @@ api_bp = Blueprint("api", __name__) # API route namespace
 
 @api_bp.get("/candles")
 def candles():
+  """
+  API endpoint for getting ticker data for display
+  """
   # Query parameters: ticker, interval, and period for yf.download()
   t = (request.args.get("ticker") or "").upper().strip()
   interval = request.args.get("interval", "60m")
@@ -23,6 +26,9 @@ def candles():
 
 @api_bp.get("/prediction")
 def predict():
+  """
+  Endpoint for getting model predictions
+  """
   t = (request.args.get("ticker") or "").upper().strip()
   if not t: jsonify({"error": "Missing ticker"}), 400
 
@@ -32,3 +38,10 @@ def predict():
 
   res = pass_input(x) # Pass Tensor to the model and get prediction data
   return jsonify({"ticker": t, **res}) # Return data as a json
+
+@api_bp.get("/healthz")
+def health():
+  """
+  Health endpoint
+  """
+  return {"status": "ok"}, 200
