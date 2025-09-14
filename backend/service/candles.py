@@ -10,7 +10,8 @@ def get_candles(ticker: str, interval: str = "30m", period: str = "30d") -> pd.D
   df = download_data(ticker, interval=interval, period=period, for_train=False)
   if df is None or df.empty: return df  # Prevents errors from operating on empty or null DataFrame
 
-  df.sort_values("Datetime", inplace=True)
+  df.reset_index(inplace=True) # Replace Datetime index with numerical index
+  df.sort_values("Datetime", inplace=True) # Sort dataframe by datetime
   display_features = ["Datetime", "Open", "High", "Low", "Close", "Volume"]
   return df[display_features].dropna()
 
@@ -26,5 +27,5 @@ def serialize_candles(df: pd.DataFrame) -> list[dict]:
       "low": float(r.Low),
       "close": float(r.Close),
       "r.volume": float(r.Volume)
-    } for r in df
+    } for r in df.itertuples(index=False)
   ]
