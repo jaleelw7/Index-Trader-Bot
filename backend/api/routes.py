@@ -44,4 +44,4 @@ def health():
   """
   Health endpoint
   """
-  return {"status": "ok"}, 200
+  return jsonify({"status": "ok"}), 200
