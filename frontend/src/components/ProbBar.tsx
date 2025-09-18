@@ -1,4 +1,4 @@
-import type { Probs } from "../types/api"
+import type { Probs } from "../types/api";
 
 const order: (keyof Probs)[] = ["buy", "hold", "sell"]; // Class display order
 // Class bar color
