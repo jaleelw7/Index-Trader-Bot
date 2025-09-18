@@ -26,6 +26,6 @@ def serialize_candles(df: pd.DataFrame) -> list[dict]:
       "high": float(r.High),
       "low": float(r.Low),
       "close": float(r.Close),
-      "r.volume": float(r.Volume)
+      "volume": float(r.Volume)
     } for r in df.itertuples(index=False)
   ]
