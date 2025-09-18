@@ -11,7 +11,7 @@ export default function PriceGraph({ data }: { data: Candle[] }){
             <XAxis dataKey="ts" tick={false}/>
             <YAxis domain={["auto", "auto"]}/>
             <Tooltip labelFormatter={(c) => new Date(c as string).toLocaleString()}/>
-            <Line type="monotone" dataKey="close" dot={false}/>
+            <Line type="linear" dataKey="close" dot={false}/>
           </LineChart>
         </ResponsiveContainer>
       </div>
