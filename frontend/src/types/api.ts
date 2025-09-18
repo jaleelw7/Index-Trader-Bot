@@ -1,0 +1,2 @@
+export type Probs = { buy: number; hold: number; sell: number }; // Preditction probability object
+export type Candle = { ts: string; open: number; high: number; low: number; close: number; volumne: number }; // Ticker data object
