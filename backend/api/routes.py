@@ -26,8 +26,8 @@ def candles():
   if not TICKER_FORMAT.fullmatch(t): return jsonify({"error": "Invalid ticker"}), 400
   # Rejects interval input if not in the allowed intervals
   if interval not in ALLOWED_INTERVAL: return jsonify({"error": "Invalid interval"}), 400
-  # Rejects period input if not in the allowed intervals
-  if interval not in ALLOWED_PERIOD: return jsonify({"error": "Invalid period"}), 400
+  # Rejects period input if not in the allowed periods
+  if period not in ALLOWED_PERIOD: return jsonify({"error": "Invalid period"}), 400
 
   ticker_df = get_candles(t, interval, period) # Download ticker data
   # Returns HTTP 404 if no ticker data was obtained
