@@ -2,11 +2,12 @@ import type { Probs, Candle } from "../types/api";
 export type PredictionResponse = { ticker: string; asof: string; probs: Probs };
 export type CandleResponse = { ticker: string; data: Candle[] };
 
+
 function buildURL(
   path: string,
   params?: Record<string, string | number | undefined>
 ){
-  const apiBase = ""
+  const apiBase = window.location.origin;
   const url = new URL(path, apiBase)
   
   if (params){
