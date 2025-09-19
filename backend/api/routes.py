@@ -9,7 +9,7 @@ api_bp = Blueprint("api", __name__) # API route namespace
 # Endpoint input format
 TICKER_FORMAT = re.compile(r"^[A-Z\.]{1,10}$")
 ALLOWED_INTERVAL = {"1m","5m","15m","60m","1d"}
-ALLOWED_PERIOD = {"7d","30d","90d","180d"}
+ALLOWED_PERIOD = {"1d", "5d", "1mo", "3mo", "6mo", "1y","ytd"}
 
 @api_bp.get("/candles")
 def candles():
@@ -19,7 +19,7 @@ def candles():
   # Query parameters: ticker, interval, and period for yf.download()
   t = (request.args.get("ticker") or "").upper().strip()
   interval = request.args.get("interval", "60m")
-  period = request.args.get("period", "30d")
+  period = request.args.get("period", "1mo")
   # Returns HTTP 400 if no ticker was given
   if not t: return jsonify({"error": "Missing ticker"}), 400
   # Rejects ticker input if not in the ticker format

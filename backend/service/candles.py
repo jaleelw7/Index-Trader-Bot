@@ -3,7 +3,7 @@ from functools import lru_cache
 from data.data_download import download_data
 
 @lru_cache(maxsize=128)
-def get_candles(ticker: str, interval: str = "30m", period: str = "30d") -> pd.DataFrame:
+def get_candles(ticker: str, interval: str = "30m", period: str = "1mo") -> pd.DataFrame:
   """
   Downloads ticker data for frontend display
   """
