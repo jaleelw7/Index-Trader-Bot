@@ -45,6 +45,6 @@ export function getPrediction(ticker: string){
   return getJSON<PredictionResponse>("api/prediction", { ticker });
 }
 
-export function getCandles(ticker: string, period = "1mo", ){
-  return getJSON<CandleResponse>("api/candles", { ticker, interval: "60m", period});
+export function getCandles(ticker: string, period = "1mo", interval = "60m"){
+  return getJSON<CandleResponse>("api/candles", { ticker, interval, period});
 }
