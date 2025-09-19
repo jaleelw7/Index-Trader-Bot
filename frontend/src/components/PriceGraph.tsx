@@ -6,6 +6,7 @@ const tickFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "2-
 const labelFormat = new Intl.DateTimeFormat(undefined, {
   year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute:"2-digit"
 });
+const priceFormat = new Intl.NumberFormat(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})
 
 export default function PriceGraph({ data }: { data: Candle[] }){
 
@@ -28,8 +29,17 @@ export default function PriceGraph({ data }: { data: Candle[] }){
               tickFormatter={(t) => tickFormat.format(new Date(t as number))}
               minTickGap={24}
             />
-            <YAxis domain={["auto", "auto"]}/>
-            <Tooltip labelFormatter={(t) => labelFormat.format(new Date(t as number))}/>
+            <YAxis 
+              domain={["auto", "auto"]}
+              tickFormatter={(n) => priceFormat.format(Number(n))}
+            />
+            <Tooltip 
+              labelFormatter={(t) => labelFormat.format(new Date(t as number))}
+              formatter={(n: number) => [
+                priceFormat.format(Number(n)),
+                "Close"
+              ]}
+            />
             <Line type="linear" dataKey="close" dot={false}/>
           </LineChart>
         </ResponsiveContainer>
