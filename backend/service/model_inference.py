@@ -21,4 +21,4 @@ def pass_input(X: torch.Tensor) -> dict:
     logits = MODEL(X)
     probs = torch.softmax(logits, dim=1) # Get probabilities for each class
     probs = probs.squeeze(0).tolist() # Remove the dimension for batch size and converts the tensor to a 2D List
-  return {"probabilites": dict(zip(CLASS_ORDER, probs))} # Return probabilites for each class as a nested dictionary
+  return {"probs": dict(zip(CLASS_ORDER, probs))} # Return probabilites for each class as a nested dictionary
