@@ -66,7 +66,7 @@ export default function Dashboard(){
       <RangeButton range={range} setRange={setRange} disabled={loading}/>
       {err && <div className="error">{err}</div>}
       {probs && <ProbBar probs={probs}/>}
-      <PriceGraph data={candles}/>
+      <PriceGraph data={candles} range={range}/>
     </div>
   );
 }
