@@ -1,6 +1,5 @@
 import torch
-from train_aux import DEVICE, SAVE_PATH
-from backend.config import CLASS_ORDER
+from backend.config import CLASS_ORDER, DEVICE, SAVE_PATH
 from model.model_tcn import TCNModel
 
 
