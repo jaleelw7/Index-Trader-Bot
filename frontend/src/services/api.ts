@@ -7,7 +7,7 @@ function buildURL(
   path: string,
   params?: Record<string, string | number | undefined>
 ){
-  const apiBase = window.location.origin;
+  const apiBase = import.meta.env.VITE_API_BASE ?? window.location.origin;
   const url = new URL(path, apiBase)
   
   if (params){
