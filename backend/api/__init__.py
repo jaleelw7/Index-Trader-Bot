@@ -6,10 +6,11 @@ from backend.config import CORS_ORIGINS
 
 def create_app() -> Flask:
   """
-  Application factory
+  application factory
   """
-  app = Flask(__name__)
-  CORS(app, origins=CORS_ORIGINS) # Configure origins
-  app.register_blueprint(api_bp, url_prefix="/api")
-  register_error_hadlers(app)
-  return app
+  application = Flask(__name__)
+  origins = origins = [o.strip() for o in CORS_ORIGINS.split(",") if o.strip()]
+  CORS(application, resources={r"/api/*": {"origins": origins}}) # Configure origins
+  application.register_blueprint(api_bp, url_prefix="/api")
+  register_error_hadlers(application)
+  return application
