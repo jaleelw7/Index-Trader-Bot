@@ -1,4 +1,4 @@
-# Index Trader Bot
+# Torch Index
 
 ### Overview
 
