@@ -1,7 +1,7 @@
 import re
 from flask import Blueprint, jsonify, request
 from backend.service.candles import get_candles, serialize_candles
-from backend.service.preprocessing import build_input
+from backend.service.preprocessing import build_input, normalize_input
 from backend.service.model_inference import pass_input
 
 api_bp = Blueprint("api", __name__) # API route namespace
@@ -16,8 +16,9 @@ def candles():
   """
   API endpoint for getting ticker data for display
   """
-  # Query parameters: ticker, interval, and period for yf.download()
-  t = (request.args.get("ticker") or "").upper().strip()
+  # Query parameters: ticker, interval, and period
+  t = (request.args.get("ticker") or "")
+  t = normalize_input(t)
   interval = request.args.get("interval", "60m")
   period = request.args.get("period", "1mo")
   # Returns HTTP 400 if no ticker was given
@@ -41,7 +42,8 @@ def predict():
   """
   Endpoint for getting model predictions
   """
-  t = (request.args.get("ticker") or "").upper().strip()
+  t = (request.args.get("ticker") or "")
+  t = normalize_input(t)
   if not t: jsonify({"error": "Missing ticker"}), 400
   if not TICKER_FORMAT.fullmatch(t): return jsonify({"error": "Invalid ticker"}), 400
 
