@@ -5,6 +5,12 @@ import torch
 import os
 from pathlib import Path
 
+class ApiKeyError(RuntimeError):
+    """Raised when FINNHUB_API_KEY is not configured on the server."""
+
+class DownloadError(RuntimeError):
+    """Raised in place of RuntimeError when downloading from Tiingo"""
+
 # Model contract
 FEATURES = ["Open", "High", "Low", "Close", "Volume", "rsi", "ema", "atr_pct"]
 WINDOW_SIZE = 96
@@ -23,4 +29,4 @@ SAVE_PATH = SAVE_DIR / MODEL_FILE
 # API
 API_HOST = os.getenv("API_HOST", "0.0.0.0")
 API_PORT = int(os.getenv("PORT", os.getenv("API_PORT", 8000)))
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "")
