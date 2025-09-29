@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import talib
 import time
+import threading
 from datetime import datetime, timezone, timedelta
 
 #Constants used in download_data
@@ -13,55 +14,53 @@ ATR_PERIOD = 14 #timeperiod parameter for ATR
 END = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
 START = END - timedelta(days=729)
 
-"""
-Method to verify if a ticker exists
-"""
-def ticker_exists(ticker: str) -> bool:
-  try:
-    info = yf.Ticker(ticker).info
-    return "shortName" in info and bool(info["shortName"])
-  except Exception:
-    return False
+_CACHE: dict[tuple, tuple[float, pd.DataFrame | None]] = {}
+_CACHE_LOCK =  threading.Lock()
   
 """
 Method to download the data from each index. For loop is added to retry downloads in case
 of yfinance failure.
 """
 def download_data(ticker: str,
-                  max_retries: int = 3,
+                  max_retries: int = 2,
                   backoff: float = 2.0,
                   interval: str = "60m",
-                  period: str = "ytd",
-                  for_train: bool =True) -> pd.DataFrame:
+                  period: str = "ytd") -> pd.DataFrame | None:
   
-  #Checks if ticker exists, raises exception if false
-  if not ticker_exists(ticker):
-    raise ValueError(f"Ticker: {ticker} does not exist.")
+  """Check cache before downloading data"""
+  k = (ticker, interval, period)
+  # Set ttl based on interval
+  if interval == "1d":
+    ttl = 1800
+  elif interval == "60m" or interval == "30m":
+    ttl = 300
+  else:
+    ttl = 90
+  now = time.time()
+  with _CACHE_LOCK:
+    cache_hit = _CACHE.get(k)
+    if cache_hit and cache_hit[0] > now:
+      return cache_hit[1].copy()
   
   #Download data for each ticker individually
   for attempt in range(1, max_retries + 1):
     try:
-      if for_train:
-        ticker_df = yf.download(ticker,
-                                start=START,
-                                end=END,
-                                interval="60m",
-                                progress=False,
-                                threads=False)
-      
-      else:
-        ticker_df = yf.download(ticker,
-                                period=period,
-                                interval=interval,
-                                progress=False,
-                                threads=False)
+      ticker_df = yf.download(ticker,
+                              start=START,
+                              end=END,
+                              interval="60m",
+                              progress=False,
+                              threads=False)
        
       #Flattens DataFrame columns if multi-index
-      ticker_df = ticker_df.xs(ticker, axis=1, level=1)
+      if isinstance(ticker_df.columns, pd.MultiIndex):
+        ticker_df = ticker_df.xs(ticker, axis=1, level=1)
 
-      #Raises an exception if no data was downloaded for ticker
+      #Return early if no data was downloaded for ticker
       if ticker_df is None or ticker_df.empty:
-        raise ValueError(f"No data found for {ticker}.")
+        with _CACHE_LOCK:
+          _CACHE[k] = (now + ttl, None)  # Cache the error result
+        return ticker_df
       
       #Add a ticker column to the DataFrame
       ticker_df["ticker"] = ticker
@@ -98,16 +97,20 @@ def download_data(ticker: str,
       for col in ["Open", "High", "Low", "Close", "Volume", "rsi", "ema", "atr", "atr_pct", "return"]:
           ticker_df[col] = ticker_df[col].astype("float32")
       
+      with _CACHE_LOCK:
+        _CACHE[k] = (now + ttl, ticker_df.copy()) # Cache the downloaded data
       return ticker_df
     
     #Catches any connectivity or download errors with yfinance
     except Exception as e:
       #If the number of attempts is less than max_retries, attempt download again after sleeping
       if attempt < max_retries:
-        sleep_time = backoff ** (attempt - 1)
+        sleep_time = backoff * (2 ** (attempt - 1))
         print(f"{ticker}: Download attempt failed ({e}). Retrying download in {sleep_time}s...")
         time.sleep(sleep_time)
       #If the max number of retries is reached, print error message and raise the exception
       else:
         print(f"{ticker}: All download attempts failed.")
-        raise e
+        with _CACHE_LOCK:
+          _CACHE[k] = (now + ttl, None) # Cache the error
+        return None
