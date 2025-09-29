@@ -66,7 +66,7 @@ export default function PriceGraph({ data, range }: { data: Candle[]; range: Ran
       <div className="label">Close Price</div>
       <div className="chart">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={numeric_ts}>
+          <LineChart data={numeric_ts} margin={{ top: 10, right: 16, left: 8, bottom: 40 }}>
             <XAxis
               dataKey="t"
               type="number"
