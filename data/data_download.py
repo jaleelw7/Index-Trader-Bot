@@ -17,18 +17,28 @@ START = END - timedelta(days=729)
 _CACHE: dict[tuple, tuple[float, pd.DataFrame | None]] = {}
 _CACHE_LOCK =  threading.Lock()
   
-"""
-Method to download the data from each index. For loop is added to retry downloads in case
-of yfinance failure.
-"""
+
 def download_data(ticker: str,
                   max_retries: int = 2,
                   backoff: float = 2.0,
                   interval: str = "60m",
                   period: str = "ytd") -> pd.DataFrame | None:
+
+  """
+  Downloads ticker data from yfinance for model training and evaluation
+
+  Args:
+      ticker (str): The ticker for the stock to download data on
+      max_retries (int): The number of times to retry the yfinance download before quitting
+      backoff (float): The amount of time to wait between download retries
+      interval (str): The yfinance supported string representing the time interval between data points for stock data
+      period (str): The yfinance supported string representing the period of time for stock data
   
-  """Check cache before downloading data"""
-  k = (ticker, interval, period)
+  Returns:
+      pd.DataFrame|None: A pandas dataframe with OHLCV stock data, technical indicators, return values, and classification labels. Returns None if no data is retrieved from yfinance due to error
+  """    
+  
+  k = (ticker, interval, period) # Cache data download 
   # Set ttl based on interval
   if interval == "1d":
     ttl = 1800
