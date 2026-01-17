@@ -18,15 +18,11 @@ SAVE_DIR.mkdir(parents=True, exist_ok=True)
 MODEL_FILE = "index_tcn_v1.pth"
 SAVE_PATH = SAVE_DIR / MODEL_FILE
 
-def get_weights(train_labels: np.ndarray) -> torch.Tensor:
+def get_weights(train_labels: np.ndarray):
   """
-  Function to calculate class weights for training data. Weights are inversely proportional to class frequency.
+  Function to calculate class weights for training data.
 
-  Args:
-      train_labels (np.ndarray): ndarray of labels for training data
-  
-  Returns:
-      torch.Tensor: A tensor of class weights
+  Weights are inversely proportional to class frequency.
   """
   class_counts = np.bincount(train_labels, minlength=3) # Array of number of samples per class
   n_samples = class_counts.sum() # Total number of samples
@@ -40,12 +36,6 @@ def get_loaders(return_weights=True) -> tuple:
   Function to retrieve training and testing data and load it into DataLoaders
 
   If return_weights parameter is True, also returns class weights
-
-  Args:
-      return_weights (bool): If True, returns class weights and data loaders. If False, returns data loaders only.
-  
-  Returns:
-      tuple: A tuple of data loaders, or data loaders and class weights if return_weights is True.
   """
   X_train, X_val, X_test, y_train, y_val, y_test = get_train_test_val() # Gets training, validation and testing data
   # Creates dataset objects from training, validation and testing data
@@ -67,9 +57,6 @@ def get_loaders(return_weights=True) -> tuple:
 def save_model(model: TCNModel):
   """
   Function to save the model to artifacts/models directory
-
-  Args:
-      model (TCNModel): The PyTorch model to be saved
   """
   try:
     torch.save(obj=model.state_dict(), f=SAVE_PATH)

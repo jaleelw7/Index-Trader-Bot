@@ -4,19 +4,12 @@ import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from data.data_download import download_data
 
-def zscore_norm(df: pd.DataFrame, features: list[str], window_size: int = 96) -> pd.DataFrame:
-  """
-  Normalizes features using rolling z-score. The z-score is computed using the mean
-  and standard deviation over the number previous intervals given by window_size
 
-  Args:
-      df (pd.DataFrame): The pandas DataFrame with train/test/validation data to be normalized
-      features (list[str]): The list of numerical features to be normalized
-      window_size (int): The length of the window for rolling z-score normalization
-  
-  Returns:
-      pd.DataFrame: The normalized train/test/validation data
-  """
+"""
+Normalizes features using rolling z-score. The z-score is computed using the mean
+and standard deviation over the number previous intervals given by window_len
+"""
+def zscore_norm(df: pd.DataFrame, features: list[str], window_size: int = 96) -> pd.DataFrame:
   norm_df = df.copy()
   norm_df.sort_values(["ticker", "Datetime"], inplace=True)
   grouped_df = df.groupby("ticker", group_keys=False)
@@ -30,19 +23,12 @@ def zscore_norm(df: pd.DataFrame, features: list[str], window_size: int = 96) ->
   
   return norm_df.dropna()
 
+"""
+Method to combine the dataframes from multiple tickers into the complete dataset.
 
-def build_dataset(tickers: list[str], features: list[str], single_ticker: bool = False) -> pd.DataFrame:
-  """
-  Combines the dataframes from multiple tickers into the complete dataset.
-
-  Args:
-      tickers (list[str]): A list of tickers for stocks to download data on from yfinance
-      features (list[str]): A list of numerical features to be normalized using zscore_norm()
-      single_ticker (bool): True if data for only one stock is required, False otherwise
-  
-  Returns:
-      pd.DataFrame: The normalized data for the specified stocks
-  """
+If single_ticker is True, downloads the dataframe for a single ticker.
+"""
+def build_dataset(tickers: list[str], features: list[str], single_ticker=False) -> pd.DataFrame:
 
   if single_ticker:
     complete_df = download_data(tickers[0])
@@ -68,19 +54,10 @@ def build_dataset(tickers: list[str], features: list[str], single_ticker: bool =
 
   return complete_df
 
-
+"""
+Method to split the DataFrame into training and testing DataFrames chronologically per ticker.
+"""
 def split_df(df: pd.DataFrame, train_split: float, val_split: float) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-  """
-  Splits the train/test/validation data into training and testing DataFrames chronologically per ticker.
-
-  Args:
-      df (pd.DataFrame): The train/test/validation DataFrame
-      train_split (float): The percentage of data to be used for training represented as a decimal
-      val_split (float): The percentage of data to be used for validation represented as a decimal
-  
-  Returns:
-      tuple[pd.DataFrame,pd.DataFrame,pd.DataFrame]: A tuple containing training, validation, and test splits of the input DataFrame
-  """
   train_list, test_list, val_list = [], [], []
 
   #Group the Dataframe by ticker and loop through each group
@@ -103,20 +80,10 @@ def split_df(df: pd.DataFrame, train_split: float, val_split: float) -> tuple[pd
 
   return train_df, val_df, test_df
 
-
+"""
+Method to create time sequences from chronologically sorted train and test DataFrames
+"""
 def create_sequence(df: pd.DataFrame, features: list[str], label: str = "return_label", window_size: int = 96) -> tuple[np.ndarray,np.ndarray]:
-  """
-  Creates time sequences from chronologically sorted train and test DataFrames
-
-  Args:
-      df (pd.DataFrame): Chronologically sorted DataFrame for training/testing
-      features (list[str]): The list of features to be extracted from the DataFrame and fed into the model
-      label (str): The name of the column holding the classification label
-      window_size (int): The length of each time sequence
-  
-  Returns:
-      tuple[np.ndarray,np.ndarray]: A tuple containing the arrays for features and labels
-  """
   X, y = [], []
 
   #Group the DataFrame by ticker and loop through the groups
@@ -132,24 +99,13 @@ def create_sequence(df: pd.DataFrame, features: list[str], label: str = "return_
   
   return np.array(X), np.array(y)
 
-
+"""
+Method to get training, validation and testing data for a list of tickers and features with a given split percentage
+"""
 def get_train_test_val(tickers: list[str] = None, 
                    features: list[str] = None, 
-                   train_split: float = 0.7, 
-                   val_split: float = 0.15) -> tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
-  """
-  Gets training, validation and testing data for a list of tickers and features
-
-  Args:
-      tickers (list[str]): The list of tickers to download data for
-      features (list[str]): The list of features to be used by the model
-      train_split (float): The percentage of data to be used for training represented as a decimal
-      val_split (float): The percentage of data to be used for validation represented as a decimal
-  
-  Returns:
-      tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray,np.ndarray,np.ndarray]: A tuple containing the train/validation/test
-      features and labels
-  """
+                   train_split: int = 0.7, 
+                   val_split = 0.15) -> tuple[np.ndarray,np.ndarray,np.ndarray,np.ndarray,np.ndarray,np.ndarray]:
   #Default tickers and input features
   if tickers is None:
     tickers = ["SPY", "QQQ", "DIA", "IWM", "VTI"]

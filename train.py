@@ -9,14 +9,6 @@ torch.manual_seed(RANDOM_SEED)
 def test_loop(model: TCNModel, loader, loss_fn, accuracy, precision, recall):
   """
   Function to calculate and print the loss and accuracy of model predictions on test data
-
-  Args:
-      model (TCNModel): A trained TCN model object
-      loader (torch.utils.data.DataLoader): The DataLoader object for the test dataset
-      loss_fn (torch.nn.CrossEntropyLoss): A weighted cross entropy loss function
-      accuracy (torchmetrics.Metric): The Metric object for accuracy
-      precision (torchmetrics.Metric): The Metric object for precision
-      recall (torchmetrics.Metric): The Metric object for recall
   """
   model.eval() # Sets the model to evaluation mode
   total_loss = 0.0
@@ -52,10 +44,6 @@ def test_loop(model: TCNModel, loader, loss_fn, accuracy, precision, recall):
 def train_loop(model: TCNModel, epochs: int):
   """
   Function to perform the training loop
-
-  Args:
-      model (TCNModel): An untrained TCNModel object
-      epochs (int): The max number of epochs to train for. Default is given by the N_EPOCHS constant in train_aux.py
   """
   model.to(DEVICE) # Move model to correct device
   train_loader, val_loader, test_loader, weights = get_loaders() # Get DataLoaders and class weights
